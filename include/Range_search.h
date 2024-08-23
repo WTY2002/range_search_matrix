@@ -10,6 +10,13 @@
 #include <queue>
 #include <fstream>
 #include <string>
+#include <sys/wait.h>
+#include <unistd.h>
+#include <sys/mman.h>
+#include <thread>
+#include <mutex>
+#include <atomic>
+#include <cmath>
 
 // 定义kd树节点结构体
 struct KDNode {
@@ -50,7 +57,13 @@ extern double r11, r12, r13;
 extern double r21, r22, r23;
 
 // 保存kd树根节点
-extern KDNode* root;
+// extern KDNode* root;
+
+// 设置创建kd树的个数
+const int N = 10;
+
+// 保存每棵kd树的树根
+extern vector<KDNode*> kdTrees;
 
 /**
  * @Method: readDataFromFile

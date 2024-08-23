@@ -11,7 +11,6 @@ KDNode* buildKDTree_test(vector<vector<double>>& points, int depth) {
     // 如果数据集只有一个点，返回叶子节点
     if (points.size() == 1) {
         KDNode* node = new KDNode(points[0]);
-        nodes.push_back(node); // 将叶子节点存入nodes数组
         return node;
     }
 
@@ -151,8 +150,8 @@ int main() {
     printf("数据加密外包的时间是：%f 毫秒\n", total_duration.count());
     fflush(stdout);
 
-    int height = getHeight(root); // 获取kd树的高度
-    cout << "Height of KD-Tree: " << height << endl;
+    // int height = getHeight(root); // 获取kd树的高度
+    // cout << "Height of KD-Tree: " << height << endl;
 
     auto start_time2 = chrono::high_resolution_clock::now();
 
@@ -167,7 +166,10 @@ int main() {
     fflush(stdout);
 
     // 释放kd树
-    delete root;
+    // delete root;
+    for (int i = 0; i < kdTrees.size(); i++) {
+        delete kdTrees[i];
+    }
 
     return 0;
 }

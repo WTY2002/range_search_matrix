@@ -23,7 +23,13 @@ double r11, r12, r13;
 double r21, r22, r23;
 
 // 保存kd树根节点
-KDNode* root;
+// KDNode* root;
+
+// 保存每棵kd树的树根
+vector<KDNode*> kdTrees;
+
+// 定义一个全局互斥锁
+mutex nodes_mutex;
 
 /**
  * @Method: readDataFromFile
@@ -74,7 +80,11 @@ KDNode* buildKDTree(vector<vector<double>>& points, int depth) {
     // 如果数据集只有一个点，返回叶子节点
     if (points.size() == 1) {
         KDNode* node = new KDNode(points[0]);
-        nodes.push_back(node); // 将叶子节点存入nodes数组
+
+        // 使用互斥锁保护对 nodes 数组的写操作
+        std::lock_guard<std::mutex> lock(nodes_mutex);
+        nodes.push_back(node); // 将叶子节点存入 nodes 数组
+
         return node;
     }
 
@@ -197,13 +207,53 @@ int dealData(char* fileString) {
 
     start_time = chrono::high_resolution_clock::now();
 
+    // 将数据集均分为N份
+    int numPoints = points.size();
+    int pointsPerGroup = numPoints / N;
+    int remainder = numPoints % N;
+
+    vector<vector<vector<double>>> dividedPoints(N); // 创建一个大小为N的二维向量，用于存储N个数据子集
+
+    int startIndex = 0;
+    for (int i = 0; i < N; i++) {
+        int endIndex = startIndex + pointsPerGroup;
+        if (i < remainder) {
+            endIndex++;
+        }
+        for (int j = startIndex; j < endIndex; j++) {
+            dividedPoints[i].push_back(points[j]);
+        }
+        startIndex = endIndex;
+    }
+
+    // 保存每棵kd树的树根
+    kdTrees.resize(N);
+
+    // 创建N个线程，每个线程处理一个数据子集并构建一棵kd树
+    vector<thread> threads(N);
+    for (int i = 0; i < N; i++) {
+        threads[i] = thread([i, &dividedPoints]() {
+            kdTrees[i] = buildKDTree(dividedPoints[i], 0);
+        });
+    }
+
+    // 等待所有线程完成
+    for (int i = 0; i < N; i++) {
+        if (threads[i].joinable()) {
+            threads[i].join();
+        }
+    }
+
+    // 输出所有叶子结点的个数
+    cout << "所有叶子结点的个数：" << nodes.size() << endl;
+
     // 构建kd树
-    root = buildKDTree(points, 0);
+    // root = buildKDTree(points, 0);
 
     // 获取结束时间点
     end_time = chrono::high_resolution_clock::now();
     // 计算时间间隔
-   total_duration = end_time - start_time;
+    total_duration = end_time - start_time;
     // 输出时间间隔
     printf("构建kd树的时间是：%f 毫秒\n", total_duration.count());
     fflush(stdout);
@@ -211,22 +261,59 @@ int dealData(char* fileString) {
 
     start_time = chrono::high_resolution_clock::now();
 
+    // // 对kd树的所有叶子节点进行加密，并保存到encrypted_point中
+    // for (int i = 0; i < nodes.size(); i++) { // 对每个叶子节点进行加密
+    //    for (int j = 0; j < nodes[i]->point.size(); j++) { // 对每个叶子节点的每个维度进行加密
+    //        vector<double> t(6); // 创建一个大小为6的向量t
+    //        t[0] = nodes[i]->point[j] * nodes[i]->point[j] * r11;
+    //        t[1] = nodes[i]->point[j] * r11;
+    //        t[2] = r11;
+    //        t[3] = r12 * r11;
+    //        t[4] = -r12 * r11;
+    //        t[5] = r13;
+    //        VectorXd v = Eigen::Map<VectorXd>(t.data(), t.size()); // 将vector<double>转换为Eigen::VectorXd
+    //        // 加密
+    //        v = encryptMatrix1.transpose() * v;
+    //        nodes[i]->encrypted_point.push_back(v); // 将加密后的向量存入encrypted_point
+    //    }
+    // }
+
     // 对kd树的所有叶子节点进行加密，并保存到encrypted_point中
-    for (int i = 0; i < nodes.size(); i++) { // 对每个叶子节点进行加密
-       for (int j = 0; j < nodes[i]->point.size(); j++) { // 对每个叶子节点的每个维度进行加密
-           vector<double> t(6); // 创建一个大小为6的向量t
-           t[0] = nodes[i]->point[j] * nodes[i]->point[j] * r11;
-           t[1] = nodes[i]->point[j] * r11;
-           t[2] = r11;
-           t[3] = r12 * r11;
-           t[4] = -r12 * r11;
-           t[5] = r13;
-           VectorXd v = Eigen::Map<VectorXd>(t.data(), t.size()); // 将vector<double>转换为Eigen::VectorXd
-           // 加密
-           v = encryptMatrix1.transpose() * v;
-           nodes[i]->encrypted_point.push_back(v); // 将加密后的向量存入encrypted_point
-       }
+    vector<thread> threads2(N); // 创建N个线程
+    int nodesPerThread = nodes.size() / N; // 每个线程需要处理的节点数
+    int remainder2 = nodes.size() % N; // 处理不均匀分配的剩余节点数
+
+    // 为每个线程分配工作
+    for (int t = 0; t < N; t++) {
+        int startIdx = t * nodesPerThread + min(t, remainder2);
+        int endIdx = startIdx + nodesPerThread + (t < remainder2 ? 1 : 0);
+
+        threads2[t] = thread([startIdx, endIdx]() {
+            for (int i = startIdx; i < endIdx; i++) { // 对分配的节点进行加密
+                for (int j = 0; j < nodes[i]->point.size(); j++) { // 对每个叶子节点的每个维度进行加密
+                    vector<double> t(6); // 创建一个大小为6的向量t
+                    t[0] = nodes[i]->point[j] * nodes[i]->point[j] * r11;
+                    t[1] = nodes[i]->point[j] * r11;
+                    t[2] = r11;
+                    t[3] = r12 * r11;
+                    t[4] = -r12 * r11;
+                    t[5] = r13;
+                    VectorXd v = Eigen::Map<VectorXd>(t.data(), t.size()); // 将vector<double>转换为Eigen::VectorXd
+                    // 加密
+                    v = encryptMatrix1.transpose() * v;
+                    nodes[i]->encrypted_point.push_back(v); // 将加密后的向量存入encrypted_point
+                }
+            }
+        });
     }
+
+    // 等待所有线程完成
+    for (int t = 0; t < N; t++) {
+        if (threads2[t].joinable()) {
+            threads2[t].join();
+        }
+    }
+
 
     // 获取结束时间点
     end_time = chrono::high_resolution_clock::now();
@@ -340,8 +427,11 @@ int range_search(char* fileString, char* resultFilePath) {
 
     // 进行范围查询
     vector<vector<VectorXd>> res;
-    kd_search(root, encrypted_query_data, lower_bound_vector, upper_bound_vector, res);
-
+    // kd_search(root, encrypted_query_data, lower_bound_vector, upper_bound_vector, res);
+    // 对N颗kd树进行范围查询
+    for (int i = 0; i < N; i++) {
+        kd_search(kdTrees[i], encrypted_query_data, lower_bound_vector, upper_bound_vector, res);
+    }
 
     // 将res内的数据写入文件
     ofstream resultFile(resultFilePath);
