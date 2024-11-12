@@ -1,4 +1,4 @@
-# Install script for directory: /root/wty/range_search_matrix/tmp/tmp.lRnStUI87X
+# Install script for directory: /root/wty/range_search_matrix/tmp/tmp.Z6hOc3n7T2
 
 # Set the install prefix
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)
@@ -50,5 +50,5 @@ endif()
 
 string(REPLACE ";" "\n" CMAKE_INSTALL_MANIFEST_CONTENT
        "${CMAKE_INSTALL_MANIFEST_FILES}")
-file(WRITE "/root/wty/range_search_matrix/tmp/tmp.lRnStUI87X/cmake-build-debug/${CMAKE_INSTALL_MANIFEST}"
+file(WRITE "/root/wty/range_search_matrix/tmp/tmp.Z6hOc3n7T2/cmake-build-debug/${CMAKE_INSTALL_MANIFEST}"
      "${CMAKE_INSTALL_MANIFEST_CONTENT}")
