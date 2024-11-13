@@ -1,0 +1,1 @@
+/opt/rh/devtoolset-11/root/usr/bin/c++ -fPIC  -Wall -Wextra -shared -Wl,-soname,librange_search.so -o /root/project4/c/project/range_search_matrix/bin/librange_search.so CMakeFiles/range_search.dir/include/Matrix_encryption.cpp.o CMakeFiles/range_search.dir/include/Range_search.cpp.o  -pthread 

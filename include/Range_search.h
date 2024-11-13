@@ -11,6 +11,12 @@
 #include <fstream>
 #include <string>
 
+#ifdef _WIN32
+#define EXPORT_SYMBOL __declspec(dllexport)
+#else
+#define EXPORT_SYMBOL __attribute__((visibility("default")))
+#endif
+
 // 定义kd树节点结构体
 struct KDNode {
     int dimension; // 切割维度
@@ -52,50 +58,68 @@ extern double r21, r22, r23;
 // 保存kd树根节点
 extern KDNode* root;
 
-/**
- * @Method: readDataFromFile
- * @Description: 读取文件中的doubles，并返回一个vector<vector<double>>类型的数据
- * @param char* filename 文件名
- * @return vector<vector<double>> doubles数据
- */
-vector<vector<double>> readDataFromFile(const char* filename);
+#ifdef __cplusplus
+extern "C" {
+#endif // __cplusplus
 
-/**
- * @Method: buildKDTree
- * @Description: 递归构建kd树
- * @param vector<vector<double>>& points 待构建的doubles数据
- * @param int depth 当前深度
- * @return KDNode* kd树根节点
- */
-KDNode* buildKDTree(vector<vector<double>>& points, int depth);
+    /**
+     * @Method: readDataFromFile
+     * @Description: 读取文件中的doubles，并返回一个vector<vector<double>>类型的数据
+     * @param char* filename 文件名
+     * @return vector<vector<double>> doubles数据
+     */
+    vector<vector<double>> readDataFromFile(const char* filename);
 
-/**
- * @Method: dealData
- * @Description: 对数据集进行预计算
- * @param char* fileString 读取数据集的地址
- * @return 状态码，1：成功；0：失败
- */
-int dealData(char* fileString);
+    /**
+     * @Method: buildKDTree
+     * @Description: 递归构建kd树
+     * @param vector<vector<double>>& points 待构建的doubles数据
+     * @param int depth 当前深度
+     * @return KDNode* kd树根节点
+     */
+    KDNode* buildKDTree(vector<vector<double>>& points, int depth);
 
-/**
- * @Method: kd_search
- * @Description: 查询kd树
- * @param KDNode* node kd树的根节点
- * @param vector<VectorXd>& encrypted_query_data 查询请求的加密数据
- * @param VectorXd& lower_bound_vector 查询请求的下界
- * @param VectorXd& upper_bound_vector 查询请求的上界
- * @param vector<vector<VectorXd>>& res 查询结果
- */
-void kd_search(KDNode* node, vector<VectorXd>& encrypted_query_data, VectorXd& lower_bound_vector, VectorXd& upper_bound_vector, vector<vector<VectorXd>>& res);
+    /**
+     * @Method: dealData
+     * @Description: 对数据集进行预计算
+     * @param char* fileString 读取数据集的地址
+     * @return 状态码，1：成功；0：失败
+     */
+    int dealData(char* fileString);
 
-/**
- * @Method: range_search
- * @Description: 发起查询请求，并返回查询结果
- * @param char* fileString 读取数据的地址
- * @param char* resultFilePath 输出数据的地址
- * @return 状态码，1：成功；0：失败
- */
-int range_search(char* fileString, char* resultFilePath);
+    /**
+     * @Method: kd_search
+     * @Description: 查询kd树
+     * @param KDNode* node kd树的根节点
+     * @param vector<VectorXd>& encrypted_query_data 查询请求的加密数据
+     * @param VectorXd& lower_bound_vector 查询请求的下界
+     * @param VectorXd& upper_bound_vector 查询请求的上界
+     * @param vector<vector<VectorXd>>& res 查询结果
+     */
+    void kd_search(KDNode* node, vector<VectorXd>& encrypted_query_data, VectorXd& lower_bound_vector, VectorXd& upper_bound_vector, vector<vector<VectorXd>>& res);
+
+    /**
+     * @Method: range_search
+     * @Description: 发起查询请求，并返回查询结果
+     * @param char* fileString 读取数据的地址
+     * @param char* resultFilePath 输出数据的地址
+     * @return 状态码，1：成功；0：失败
+     */
+    int range_search(char* fileString, char* resultFilePath);
+
+    /**
+     * @Method: clear
+     * @Description: 清空kd树
+     */
+    void clear();
+
+    EXPORT_SYMBOL int init_algo(char* fileString);
+    EXPORT_SYMBOL int query_algo(char* fileString, char* resultFilePath);
+    EXPORT_SYMBOL int free_algo();
+
+#ifdef __cplusplus
+}
+#endif
 
 
 #endif //RANGE_SEARCH_H
